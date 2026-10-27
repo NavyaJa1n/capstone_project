@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seawater Intrusion Calculator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Seawater intrusion with a cutoff wall</h1>
+  <p class="sub">Analytical solution of Sun et al. (2026), Advances in Water Resources 212, 105301. Constant inland flux, no mixing correction.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Aquifer type">
+  <button role="tab" id="tab-confined" aria-controls="panel-confined" aria-selected="true" data-tab="confined">Confined</button>
+  <button role="tab" id="tab-unconfined" aria-controls="panel-unconfined" aria-selected="false" tabindex="-1" data-tab="unconfined">Unconfined</button>
+  <button role="tab" id="tab-other" aria-controls="panel-other" aria-selected="false" tabindex="-1" data-tab="other">Other aquifer types</button>
+</nav>
+
+<main>
+  <section id="panel-confined" role="tabpanel" aria-labelledby="tab-confined" class="calc">
+    <form id="form" class="inputs" novalidate autocomplete="off">
+      <p class="hint">Use the up and down arrow keys or Enter to move between values. Default values are pre-filled.</p>
+      <div id="fields"></div>
+      <div class="actions">
+        <button type="button" id="btn-calc" class="primary">Process output</button>
+        <button type="button" id="btn-snap">Download snapshot</button>
+        <button type="button" id="btn-reset" class="link">Reset to defaults</button>
+      </div>
+    </form>
+
+    <section class="results" aria-live="polite" aria-label="Results">
+      <h2>Output</h2>
+      <div id="status" class="status" role="status" hidden></div>
+      <div id="out"></div>
+    </section>
+  </section>
+
+  <section id="panel-unconfined" role="tabpanel" aria-labelledby="tab-unconfined" class="stub" hidden>
+    <h2>Unconfined aquifer</h2>
+    <p>To be built.</p>
+  </section>
+
+  <section id="panel-other" role="tabpanel" aria-labelledby="tab-other" class="stub" hidden>
+    <h2>Other aquifer types</h2>
+    <p>To be built.</p>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
