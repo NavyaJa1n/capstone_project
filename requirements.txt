@@ -1,0 +1,5 @@
+# Python dependencies. Install with: pip install -r requirements.txt
+# Plotly is loaded in the browser from a CDN (see static/index.html); nothing to install for it.
+flask>=3.0,<4.0
+gunicorn>=22.0         # production server (Linux/macOS/Render); not needed on Windows for local use
+waitress>=3.0          # production server that also works on Windows

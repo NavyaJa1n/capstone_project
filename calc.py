@@ -144,6 +144,56 @@ def _toe(sc, Lb, hb, kappa, wb):
     raise CalcError(f"Unknown scenario '{sc}'.")
 
 
+def _g(sc, x, Lb, hb, k, wb):
+    """Dimensionless flow-path thickness g = alpha*phi_bar = h/H (Eqs. 9-16). Interface height z/H = 1 - g (Eq. 7)."""
+    r = lambda v: math.sqrt(max(v, 0.0))
+    b1 = (1 - hb) * (1 - k)
+    if sc == "a" or x <= Lb:
+        return r(x)
+    d2 = lambda: r((x - (1 - k) * Lb) / k)
+    d3 = lambda: r(x - k * b1 ** 2 / (1 - k) - (1 - k) * Lb) + b1
+    if sc in "bc":
+        if sc == "b" or x <= Lb + wb:
+            return r(x + b1 * (b1 - 2 * math.sqrt(Lb))) + b1
+        lam = b1 - math.sqrt(Lb)
+        return r(x + 2 * b1 * lam + 2 * b1 * r(lam ** 2 + wb))
+    xh = (1 - k) * Lb + k * (1 - hb) ** 2
+    if sc == "d":
+        return d2() if x <= xh else d3()
+    if sc == "e":
+        if x <= xh:
+            return d2()
+        if x <= Lb + wb:
+            return d3()
+        return r(x - (1 - k) * Lb + b1 * ((1 - 2 * k) / (1 - k) * b1
+                 + 2 * r(k * Lb + wb - k * b1 ** 2 / (1 - k))))
+    return d2() if x <= Lb + wb else r(x - (1 - 1 / k) * wb)   # f
+
+
+def _plot(sc, Lb, hb, k, wb, xtb, xa, H, v):
+    xh = (1 - k) * Lb + k * (1 - hb) ** 2
+    xs = {i * xtb / 300 for i in range(301)} | {xtb}
+    for p in (Lb, Lb + wb, xh if sc in "de" else None):
+        if p is not None and 0 <= p <= xtb:
+            xs |= {p, max(p - 1e-9, 0.0)}
+    xs = sorted(xs)
+    z = lambda x: H * max(0.0, 1 - _g(sc, x, Lb, hb, k, wb))
+    prof = [(x * xa, z(x)) for x in xs]
+    prof[-1] = (prof[-1][0], 0.0)
+    nw = [(i / 100 * xa, H * (1 - math.sqrt(i / 100))) for i in range(101)]
+    marks = [dict(key="toe", label="Interface toe", x=xtb * xa, z=0.0)]
+    if Lb <= xtb and sc != "a":
+        marks.append(dict(key="seaward", label="Seaward face of wall", x=Lb * xa, z=z(Lb)))
+    if Lb + wb <= xtb and sc != "a":
+        marks.append(dict(key="landward", label="Landward face of wall", x=(Lb + wb) * xa, z=z(Lb + wb)))
+    if sc in "de":
+        marks.append(dict(key="exit", label="Interface leaves wall opening", x=xh * xa, z=v["hw"]))
+    return dict(x=[round(p[0], 4) for p in prof], z=[round(p[1], 4) for p in prof],
+                nx=[round(p[0], 3) for p in nw], nz=[round(p[1], 3) for p in nw],
+                marks=marks, H=v["H"], hw=v["hw"], Lw=v["Lw"], w=v["w"],
+                xmax=max(xa, v["Lw"] + v["w"]) * 1.06)
+
+
 def calculate(raw):
     """Run Algorithm 1 (confined, flux-controlled). Returns a dict or raises CalcError."""
     v = _parse(raw)
@@ -167,4 +217,5 @@ def calculate(raw):
                         f"for scenario ({sc}). The inputs are outside the validity of the solution.")
     return dict(alpha=alpha, gamma1=gamma1, xt_nowall=xa, kappa=kappa, L_bar=Lb, w_bar=wb, h_bar=hb,
                 scenario=sc, scenario_desc=SCENARIOS[sc], xt_bar=min(xtb, 1.0), xt=min(xt, xa),
-                reduction_pct=(1 - min(xtb, 1.0)) * 100)
+                reduction_pct=(1 - min(xtb, 1.0)) * 100,
+                plot=_plot(sc, Lb, hb, kappa, wb, min(xtb, 1.0), xa, v["H"], v))

@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: seawater-intrusion
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --worker-class gthread --threads 4 --timeout 30 --bind 0.0.0.0:$PORT

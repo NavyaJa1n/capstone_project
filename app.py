@@ -1,8 +1,8 @@
 """Local web server. Run:  python app.py   then open http://127.0.0.1:5000"""
 import datetime
+import os
 import logging
-import re
-import threading
+import uuid
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -10,15 +10,12 @@ from flask import Flask, jsonify, request, send_from_directory
 import calc
 
 BASE = Path(__file__).resolve().parent
-SNAP_DIR = BASE / "snapshots"
-SNAP_DIR.mkdir(exist_ok=True)
-AQUIFERS = {"confined"}
-_lock = threading.Lock()
 log = logging.getLogger("cutoff")
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__, static_folder=str(BASE / "static"), static_url_path="/static")
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 
 
 def fail(msg, code=400, fields=None):
@@ -65,10 +62,9 @@ def _fmt(x):
     return f"{x:.6g}"
 
 
-def _snapshot_text(aquifer, raw, serial, stamp):
+def _snapshot_text(aquifer, raw, stamp):
     L = ["Seawater intrusion with a cutoff wall",
          f"Aquifer type : {aquifer}",
-         f"Snapshot no. : {serial:03d}",
          f"Created      : {stamp:%Y-%m-%d %H:%M:%S}",
          "Method       : Sun et al. (2026), Adv. Water Resour. 212, 105301 (Eqs. 8, 17-23)",
          "Boundary     : constant inland flux; no mixing correction applied", "", "INPUTS"]
@@ -101,27 +97,15 @@ def _snapshot_text(aquifer, raw, serial, stamp):
 
 @app.post("/api/snapshot")
 def api_snapshot():
+    """Stateless: builds the text and returns it; nothing is stored on the server."""
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return fail("Request body must be JSON.")
-    aquifer = data.get("aquifer", "confined")
     raw = data.get("inputs") if isinstance(data.get("inputs"), dict) else {}
-    if aquifer not in AQUIFERS:
-        return fail("Snapshots are only available for confined aquifers.")
-    try:
-        with _lock:
-            pat = re.compile(rf"^{aquifer}_(\d+)_")
-            serial = 1 + max([int(m.group(1)) for p in SNAP_DIR.glob(f"{aquifer}_*.txt")
-                              if (m := pat.match(p.name))] or [0])
-            stamp = datetime.datetime.now()
-            name = f"{aquifer}_{serial:03d}_{stamp:%Y-%m-%d}.txt"
-            text = _snapshot_text(aquifer, raw, serial, stamp)
-            (SNAP_DIR / name).write_text(text, encoding="utf-8")
-    except OSError:
-        log.exception("Could not write snapshot")
-        return fail("The snapshot could not be saved on the server.", 500)
-    return jsonify(ok=True, filename=name, text=text)
+    stamp = datetime.datetime.now()
+    name = f"confined_{stamp:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:4]}.txt"
+    return jsonify(ok=True, filename=name, text=_snapshot_text("confined", raw, stamp))
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", 5000)), debug=False)
