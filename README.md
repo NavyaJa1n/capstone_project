@@ -29,22 +29,6 @@ for that scenario.
 4. Start the app: `python app.py`
 5. Open http://127.0.0.1:5000
 
-## Run for several users (production)
-
-- Linux/macOS: `gunicorn app:app --workers 2 --worker-class gthread --threads 4 --timeout 30 --bind 0.0.0.0:5000`
-- Windows: `waitress-serve --listen=0.0.0.0:5000 app:app`
-
-The app keeps no state on the server (calculations and snapshots are computed per request), so any number of
-workers can run side by side. Raise `--workers` to the number of CPU cores.
-
-## Deploy on Render
-
-1. Push this folder to a GitHub repository.
-2. On render.com choose New > Web Service and select the repository (it reads `render.yaml`).
-3. Build command: `pip install -r requirements.txt`. Start command is already set in `render.yaml` / `Procfile`.
-4. Open the URL Render gives you.
-
-Any host that supports `Procfile` (Railway, Heroku-style platforms) works the same way.
 
 ## Using the app
 
