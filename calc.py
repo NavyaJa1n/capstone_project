@@ -111,10 +111,11 @@ def _scenario(Lb, hb, kappa, wb):
     if hb >= 1 - s:
         B = 1 + (Lb + wb - 1) / (2 * (kappa - 1) * (s - 1))
         return "b" if hb < B else "c"
-    lower = 1 - math.sqrt(Lb + wb / kappa)
     rad = (kappa * (Lb - 1) + wb) / (1 - kappa)
     D = math.sqrt(rad) if rad > 0 else 0.0
-    if hb < lower:
+    # Scenario (f) needs hb < 1 - sqrt(Lb + wb/kappa). That bound goes to -infinity
+    # as kappa -> 0, so (f) cannot occur for an impermeable wall.
+    if kappa > 0 and hb < 1 - math.sqrt(Lb + wb / kappa):
         return "f"
     return "d" if hb < D else "e"
 
