@@ -16,7 +16,7 @@ FIELDS = [
     dict(key="Ka", group="Aquifer", name="Aquifer hydraulic conductivity", sym="Ka", html="K<sub>a</sub>", unit="m/d", default=10,
          min=0, min_ex=True, max=10000, desc="Ka: hydraulic conductivity of the aquifer."),
     dict(key="Kw", group="Cutoff wall", name="Wall hydraulic conductivity", sym="Kw", html="K<sub>w</sub>", unit="m/d", default=0.001,
-         min=0, min_ex=True, max=10000, desc="Kw: hydraulic conductivity of the cutoff wall. Must be smaller than Ka."),
+         min=0, min_ex=False, max=10000, desc="Kw: hydraulic conductivity of the cutoff wall. Must be smaller than Ka."),
     dict(key="Lw", group="Cutoff wall", name="Wall distance from coast", sym="Lw", html="L<sub>w</sub>", unit="m", default=38,
          min=0, min_ex=False, max=100000, desc="Lw: distance from the coastline to the seaward face of the wall. 0 means the wall is on the coast."),
     dict(key="hw", group="Cutoff wall", name="Wall opening height", sym="hw", html="h<sub>w</sub>", unit="m", default=18,
