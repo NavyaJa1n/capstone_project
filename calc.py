@@ -1,7 +1,7 @@
 """Confined-aquifer seawater intrusion with a cutoff wall.
 Implements Algorithm 1 (blue steps) of Sun et al. (2026), Adv. Water Resour. 212, 105301:
 Eq. (8) dimensionless variables, Eq. (23) scenario test, Eqs. (17)-(22) interface toe.
-Flux-controlled inland boundary only; no mixing correction applied."""
+Flux-controlled inland boundary only; Pool and Carrera (2011) mixing correction, Eq. (43), applied through alpha (set aT = 0 to switch it off)."""
 import math
 import re
 
@@ -15,6 +15,8 @@ FIELDS = [
          min=0, min_ex=True, max=1000, desc="Hs: sea level measured from the aquifer base. Must be at least H for a confined aquifer."),
     dict(key="Ka", group="Aquifer", name="Aquifer hydraulic conductivity", sym="Ka", html="K<sub>a</sub>", unit="m/d", default=10,
          min=0, min_ex=True, max=10000, desc="Ka: hydraulic conductivity of the aquifer."),
+    dict(key="aT", group="Aquifer", name="Transverse dispersivity", sym="aT", html="&alpha;<sub>T</sub>", unit="m", default=0.1,
+         min=0, min_ex=False, max=1000, desc="αT: transverse dispersivity, used only for the Pool and Carrera (2011) mixing correction, Eq. (43). Set 0 to switch the correction off."),
     dict(key="Kw", group="Cutoff wall", name="Wall hydraulic conductivity", sym="Kw", html="K<sub>w</sub>", unit="m/d", default=0,
          min=0, min_ex=False, max=10000, desc="Kw: hydraulic conductivity of the cutoff wall. Must be smaller than Ka."),
     dict(key="Lw", group="Cutoff wall", name="Wall distance from coast", sym="Lw", html="L<sub>w</sub>", unit="m", default=38,
@@ -98,6 +100,8 @@ def _parse(raw):
             errors["Kw"] = "Must be smaller than the aquifer conductivity Ka."
         if vals["rho_s"] <= vals["rho_f"]:
             errors["rho_s"] = "Must be larger than the freshwater density."
+        if vals["aT"] >= vals["H"]:
+            errors["aT"] = "Must be smaller than the aquifer thickness H."
     if errors:
         raise CalcError("Some values are out of range. Correct the marked fields.", errors)
     return vals
@@ -111,10 +115,11 @@ def _scenario(Lb, hb, kappa, wb):
     if hb >= 1 - s:
         B = 1 + (Lb + wb - 1) / (2 * (kappa - 1) * (s - 1))
         return "b" if hb < B else "c"
-    lower = 1 - math.sqrt(Lb + wb / kappa)
     rad = (kappa * (Lb - 1) + wb) / (1 - kappa)
     D = math.sqrt(rad) if rad > 0 else 0.0
-    if hb < lower:
+    # Scenario (f) needs hb < 1 - sqrt(Lb + wb/kappa). That bound goes to -infinity
+    # as kappa -> 0, so (f) cannot occur for an impermeable wall.
+    if kappa > 0 and hb < 1 - math.sqrt(Lb + wb / kappa):
         return "f"
     return "d" if hb < D else "e"
 
@@ -199,7 +204,8 @@ def calculate(raw):
     v = _parse(raw)
     try:
         alpha = v["rho_f"] / (v["rho_s"] - v["rho_f"])          # Eq. (2) definition
-        gamma1 = 2 * alpha * v["qf"] / v["Ka"]                   # Eq. (A4)
+        alpha_c = alpha / (1 - (v["aT"] / v["H"]) ** (1 / 6))    # Eq. (43), flux-controlled
+        gamma1 = 2 * alpha_c * v["qf"] / v["Ka"]                 # Eq. (A4) with corrected alpha                 # Eq. (A4)
         xa = v["H"] ** 2 / gamma1                                # Eq. (A6)
         kappa = v["Kw"] / v["Ka"]                                # Eq. (8)
         Lb, wb, hb = v["Lw"] / xa, v["w"] / xa, v["hw"] / v["H"]  # Eq. (8)
